@@ -1,7 +1,12 @@
+using System;
+using System.Net.Http;
+
 namespace learning_c_sharp.ProgramFlow;
 
 public class Exceptions
 {
+    public decimal Balance { get; private set; }
+    
     public static void nutshell()
     {
         int x = 100;
@@ -27,4 +32,54 @@ public class Exceptions
             Console.WriteLine("This code always runs.");
         }
     }
+
+    public static void custom()
+    {
+        
+    }
 }
+
+
+public class CurrencyConverter(IExchangeRateProvider exchangeRateProvider)
+{
+    private readonly IExchangeRateProvider _exchangeRateProvider = exchangeRateProvider;
+
+    public decimal convert(decimal amount, string fromCurrency, string toCurrency)
+    {
+        if (string.IsNullOrWhiteSpace(fromCurrency) || string.IsNullOrWhiteSpace(toCurrency))
+        {
+            throw new ArgumentException("Source and target currencies cannot be empty.");
+        }
+
+        if (string.Equals(fromCurrency, toCurrency, StringComparison.CurrentCultureIgnoreCase))
+        {
+            return amount;
+        }
+
+        try
+        {
+            var exchangeRates = _exchangeRateProvider.GetExchangeRates(fromCurrency);
+            if (!exchangeRates.TryGetValue(toCurrency, out decimal value))
+            {
+                throw new InvalidOperationException($"Exchange rate not found for {toCurrency}.");
+            }
+
+            var exchangeRate = value;
+            return amount * exchangeRate;
+        }
+        catch (ErrorFetchingException? ex)
+        {
+            throw new CurrencyConversionException("Error fetching exchange rates.", ex);
+        }
+    }
+}
+
+public interface IExchangeRateProvider
+{
+    Dictionary<string, decimal> GetExchangeRates(string baseCurrency);
+}
+
+public class CurrencyConversionException(string message, Exception? innerException = null)
+    : Exception(message, innerException);
+
+public class ErrorFetchingException(string message) : Exception(message);
